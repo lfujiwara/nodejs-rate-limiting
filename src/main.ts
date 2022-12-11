@@ -1,31 +1,18 @@
 import { makeApp } from './app';
-import { envConfig } from './config/env-config';
-import { makeThrottlingMiddleware } from './middlewares/throttling-middleware';
 import { makeRedisFixedWindowThrottler } from './services/implementations/redis-fixed-window-throttler';
+import { ThrottlerFactory } from './services/throttler';
 import { setup } from './setup';
 
 const main = async () => {
-  const { rateLimitingRedis, teardown } = await setup();
+  const { rateLimitingRedis } = await setup();
 
-  const publicRoutesThrottler = await makeRedisFixedWindowThrottler({
-    maxRequestsPerHour: envConfig.maxRequestsPerHourOnPublicRoutes,
-    redis: rateLimitingRedis,
-  });
-  const privateRoutesThrottler = await makeRedisFixedWindowThrottler({
-    maxRequestsPerHour: envConfig.maxRequestsPerHourOnPrivateRoutes,
-    redis: rateLimitingRedis,
-  });
+  const throttlerFactory: ThrottlerFactory = (options) =>
+    makeRedisFixedWindowThrottler({
+      redis: rateLimitingRedis,
+      ...options,
+    });
 
-  const app = makeApp(
-    makeThrottlingMiddleware(
-      (req) => req.socket.remoteAddress,
-      publicRoutesThrottler,
-    ),
-    makeThrottlingMiddleware(
-      (req) => req.headers.authorization,
-      privateRoutesThrottler,
-    ),
-  );
+  const app = makeApp(throttlerFactory);
 
   app.listen(3000, () => {
     console.log('Server is running on port 3000');

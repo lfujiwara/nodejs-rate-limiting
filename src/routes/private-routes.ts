@@ -1,12 +1,22 @@
-import { Router } from 'express';
+import { Request, Router } from 'express';
+import { envConfig } from '../config/env-config';
 import { authMiddleware } from '../middlewares/auth-middleware';
-import { ExpressMiddleware } from '../middlewares/types';
+import { makeThrottlingMiddleware } from '../middlewares/throttling-middleware';
+import { ThrottlerFactory } from '../services/throttler';
 
-export const privateRoutes = (throttler?: ExpressMiddleware) => {
+export const privateRoutes = (throttlerFactory?: ThrottlerFactory) => {
   const router = Router();
   router.use(authMiddleware);
 
-  if (throttler) router.use(throttler);
+  if (throttlerFactory) {
+    const idExtractor = (req: Request) => req.socket.remoteAddress;
+    const throttler = throttlerFactory({
+      maxRequestsPerHour: envConfig.maxRequestsPerHourOnPrivateRoutes,
+      throttlerId: 'public-routes',
+    });
+
+    router.get('/', makeThrottlingMiddleware(idExtractor, throttler, 1));
+  }
 
   router.get('/', (_, res) => {
     res.json({ message: 'Hello from private route!' });

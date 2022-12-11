@@ -23,37 +23,34 @@ const getTimeWindow = () => {
   } as TimeWindow;
 };
 
-const makeConsumerKey = (id: string, timeWindowKey: string) =>
-  `${id}:${timeWindowKey}`;
-
-export const makeRedisFixedWindowThrottler = async (
-  config: ThrottlerOptions & { redis: RedisClientType },
-): Promise<Throttler> => {
+export const makeRedisFixedWindowThrottler = (
+  config: ThrottlerOptions & { redis: RedisClientType; throttlerId?: string },
+): Throttler => {
   const { redis } = config;
+  const makeConsumerKey = (id: string, timeWindowKey: string) =>
+    `${config.throttlerId}:${id}:${timeWindowKey}`;
 
-  const countCalls = (window: TimeWindow, id: string) =>
-    redis
-      .get(makeConsumerKey(id, window.key))
-      .then((res) => (res ? parseInt(res, 10) : 0));
-
-  const placeCall = (window: TimeWindow, id: string, weight: number) => {
-    const key = makeConsumerKey(id, window.key);
-    return redis.multi().incrBy(key, weight).expire(key, window.expire);
-  };
-
-  return async (id) => {
+  return async (id, weight = 1) => {
     const timeWindow = getTimeWindow();
+    const key = makeConsumerKey(id, timeWindow.key);
+    const pmKey = `${key}:${process.env.pm_id || 'node'}`;
 
-    const multi = placeCall(timeWindow, id, 1);
-    const count = await countCalls(timeWindow, id);
+    const [countStr] = await redis
+      .multi()
+      .get(key)
+      .incrBy(key, weight)
+      .expire(key, timeWindow.expire)
+      .exec();
+    const count = parseInt(countStr.toString(), 10);
 
-    if (count >= config.maxRequestsPerHour) {
+    if (count > config.maxRequestsPerHour) {
       if (envConfig.logThrottlingInfo)
-        console.warn('Throttled request', {
-          id,
-          count,
-          limit: config.maxRequestsPerHour,
-        });
+        await redis.incrBy(`throttled:${pmKey}`, weight);
+      console.warn('Throttled request', {
+        id,
+        count,
+        limit: config.maxRequestsPerHour,
+      });
       return [
         false,
         {
@@ -63,14 +60,8 @@ export const makeRedisFixedWindowThrottler = async (
       ];
     }
 
-    await multi.exec();
-
     if (envConfig.logThrottlingInfo)
-      console.log('Allowed request', {
-        id,
-        count,
-        limit: config.maxRequestsPerHour,
-      });
+      await redis.incrBy(`allowed:${pmKey}`, weight);
     return [true, null];
   };
 };

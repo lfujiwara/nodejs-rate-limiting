@@ -1,17 +1,14 @@
 import express from 'express';
-import { ExpressMiddleware } from './middlewares/types';
 import { privateRoutes } from './routes/private-routes';
 import { publicRoutes } from './routes/public-routes';
+import { ThrottlerFactory } from './services/throttler';
 
-export const makeApp = (
-  publicRoutesThrottler?: ExpressMiddleware,
-  privateRoutesThrottler?: ExpressMiddleware,
-) => {
+export const makeApp = (throttlerFactory?: ThrottlerFactory) => {
   const app = express();
   app.use(express.json());
 
-  app.use('/public', publicRoutes(publicRoutesThrottler));
-  app.use('/private', privateRoutes(privateRoutesThrottler));
+  app.use('/public', publicRoutes(throttlerFactory));
+  app.use('/private', privateRoutes(throttlerFactory));
 
   return app;
 };

@@ -23,9 +23,7 @@ RUN addgroup -g $GID ${APP_GROUP} && \
 
 USER ${APP_USER}:${APP_GROUP}
 
-ARG PORT=3000
-ENV PORT=$PORT
-EXPOSE ${PORT}
+EXPOSE 3000
 
 FROM base as dev 
 

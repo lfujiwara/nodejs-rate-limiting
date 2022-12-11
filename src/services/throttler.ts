@@ -4,8 +4,12 @@
  */
 export type Throttler = (
   id: string,
+  weight?: number,
 ) => Promise<[true, null] | [false, { limit: number; nextAttempt: Date }]>;
 
 export type ThrottlerOptions = {
   maxRequestsPerHour: number;
+  throttlerId: string;
 };
+
+export type ThrottlerFactory = (options: ThrottlerOptions) => Throttler;

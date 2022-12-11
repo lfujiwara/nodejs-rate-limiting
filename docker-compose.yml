@@ -8,6 +8,8 @@ services:
     environment:
       - REDIS_RATE_LIMITING_URL=redis://redis:6379
       - LOG_THROTTLING_INFO=false
+    depends_on:
+      - redis
   redis:
     image: redis:7-alpine
     ports:

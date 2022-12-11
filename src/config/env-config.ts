@@ -16,11 +16,11 @@ export const envConfig: EnvConfig = {
     process.env.REDIS_RATE_LIMITING_URL || 'redis://localhost:6379',
   logThrottlingInfo: process.env.LOG_THROTTLING_INFO === 'true',
   maxRequestsPerHourOnPrivateRoutes: parseInt(
-    process.env.MAX_REQUESTS_PER_HOUR_ON_PRIVATE_ROUTES || '1000',
+    process.env.MAX_REQUESTS_PER_HOUR_ON_PRIVATE_ROUTES || '200',
     10,
   ),
   maxRequestsPerHourOnPublicRoutes: parseInt(
-    process.env.MAX_REQUESTS_PER_HOUR_ON_PUBLIC_ROUTES || '1000',
+    process.env.MAX_REQUESTS_PER_HOUR_ON_PUBLIC_ROUTES || '100',
     10,
   ),
 };

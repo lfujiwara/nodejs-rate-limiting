@@ -5,9 +5,10 @@ import { ExpressMiddleware } from './types';
 export const makeThrottlingMiddleware = (
   idExtractor: (req: Request) => string,
   throttler: Throttler,
+  weight = 1,
 ) =>
   ((req: Request, res: Response, next: NextFunction) => {
-    throttler(idExtractor(req))
+    throttler(idExtractor(req), weight)
       .then(([allowed, throttleDetails]) => {
         if (allowed) next();
         else
