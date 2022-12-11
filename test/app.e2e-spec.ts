@@ -1,24 +1,51 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
 import * as request from 'supertest';
-import { AppModule } from './../src/app.module';
 
-describe('AppController (e2e)', () => {
-  let app: INestApplication;
+describe('Route responses', () => {
+  let app: Express.Application;
 
-  beforeEach(async () => {
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile();
+  /**
+   * Setup environment variables for testing
+   */
+  const wrongSecret = 'incorrect';
+  const correctSecret = 'correct';
+  process.env.PRIVATE_ROUTES_SECRET = correctSecret;
 
-    app = moduleFixture.createNestApplication();
-    await app.init();
+  beforeEach(() => {
+    // eslint-disable-next-line
+    app = require('../src/app').makeApp();
   });
 
-  it('/ (GET)', () => {
-    return request(app.getHttpServer())
-      .get('/')
-      .expect(200)
-      .expect('Hello World!');
+  it(`should return 200 status and 'Hello from public route!' when GET /public is called`, async () => {
+    await request
+      .agent(app)
+      .get('/public')
+      .expect({ message: 'Hello from public route!' })
+      .expect(200);
+  });
+
+  it(`should return 401 status and 'Unauthorized' when GET /private is called without an authorization header`, async () => {
+    await request
+      .agent(app)
+      .get('/private')
+      .expect({ message: 'Unauthorized' })
+      .expect(401);
+  });
+
+  it(`should return 403 status and 'Forbidden' when GET /private is called with the incorrect authorization header`, async () => {
+    await request
+      .agent(app)
+      .get('/private')
+      .set('Authorization', wrongSecret)
+      .expect({ message: 'Forbidden' })
+      .expect(403);
+  });
+
+  it(`should return 200 status and 'Hello from private route!' when GET /private is called with the correct authorization header`, async () => {
+    await request
+      .agent(app)
+      .get('/private')
+      .set('Authorization', correctSecret)
+      .expect({ message: 'Hello from private route!' })
+      .expect(200);
   });
 });
