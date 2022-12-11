@@ -1,7 +1,8 @@
 import { NextFunction, Request, Response } from 'express';
 import { envConfig } from '../config/env-config';
+import { ExpressMiddleware } from './types';
 
-export const authMiddleware = (
+export const authMiddleware: ExpressMiddleware = (
   req: Request,
   res: Response,
   next: NextFunction,
