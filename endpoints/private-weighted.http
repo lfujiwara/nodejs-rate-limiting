@@ -1,0 +1,2 @@
+GET http://localhost:3000/private/50 HTTP/2
+Authorization: 61D19E59-B95F-480A-930F-B4480BC96AE2

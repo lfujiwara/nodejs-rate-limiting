@@ -1,5 +1,5 @@
 #!/usr/bin/env sh
 . "$(dirname -- "$0")/_/husky.sh"
 
-npm run test:cov
+npm run test:cov -- --passWithNoTests
 npm run test:e2e

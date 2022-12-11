@@ -41,16 +41,22 @@ export const makeRedisFixedWindowThrottler = (
       .incrBy(key, weight)
       .expire(key, timeWindow.expire)
       .exec();
-    const count = parseInt(countStr.toString(), 10);
+    const prevCount = countStr ? parseInt(countStr.toString(), 10) : 0;
 
-    if (count > config.maxRequestsPerHour) {
+    if (prevCount + weight > config.maxRequestsPerHour) {
+      await redis
+        .multi()
+        .decrBy(key, weight)
+        .incrBy(`throttled:${pmKey}`, weight)
+        .exec();
+
       if (envConfig.logThrottlingInfo)
-        await redis.incrBy(`throttled:${pmKey}`, weight);
-      console.warn('Throttled request', {
-        id,
-        count,
-        limit: config.maxRequestsPerHour,
-      });
+        console.warn('Throttled request', {
+          id,
+          prevCount,
+          limit: config.maxRequestsPerHour,
+        });
+
       return [
         false,
         {
@@ -60,8 +66,7 @@ export const makeRedisFixedWindowThrottler = (
       ];
     }
 
-    if (envConfig.logThrottlingInfo)
-      await redis.incrBy(`allowed:${pmKey}`, weight);
+    await redis.incrBy(`allowed:${pmKey}`, weight);
     return [true, null];
   };
 };
